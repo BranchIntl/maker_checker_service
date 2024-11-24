@@ -1,0 +1,20 @@
+# These files are synced (using git) from the gem_template repo using the ./bin/update_configs script.
+
+.github/
+.circleci/
+.vscode/
+bin/
+spec/rails_helper.rb
+spec/spec_helper.rb
+
+.gitignore
+.rubocop.yml
+.rspec
+.rspec_parallel
+.rspec-tracer
+.ruby-version
+.erb_lint.yml
+
+Guardfile
+Gemfile
+Rakefile

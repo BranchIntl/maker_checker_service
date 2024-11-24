@@ -1,0 +1,3 @@
+RSpecTracer.configure do # rubocop:disable Naming/FileName this is the required filename for rspec tracer.
+  log_level 'off'
+end

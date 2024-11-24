@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# This script runs static analysis tools on the specified engines or the Acacia
+# server and its dependencies.
+
+# Exit immediately if a command exits with a nonzero status
+set -e
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
+
+# Start a new process group so that when the script is killed, all processes
+# started by it are killed.
+trap "exit" INT TERM
+
+# Set up an EXIT trap to capture the exit code, kill all processes, and prevent recursion
+trap 'ret=$?; trap - EXIT; /usr/bin/pkill -P $$ || true; exit $ret' EXIT
+
+# Function to run multiple commands in parallel and report their status
+run_commands_in_parallel() {
+  # Temporarily disable 'set -e' to handle errors manually
+  set +e
+
+  local failed=0
+  local pids=()
+  local commands=("$@")
+  local counter=1
+
+  # Create tmp directory if it doesn't exist
+  mkdir -p tmp/
+
+  # Iterate over all commands provided as arguments
+  for cmd in "${commands[@]}"; do
+    local log_file="tmp/log-$counter.log"
+    $cmd >"$log_file" 2>&1 &
+    pids+=($!)
+    ((counter++))
+  done
+
+  # Wait for all processes to complete and check their exit status
+  for i in "${!pids[@]}"; do
+    wait "${pids[i]}"
+    exit_status=$?
+    if [ $exit_status -ne 0 ]; then
+      echo "✗ Command failed: ${commands[i]}. See tmp/log-$((i + 1)).log for details."
+      cat "tmp/log-$((i + 1)).log"
+      failed=1
+    else
+      echo "✓ Command completed successfully: ${commands[i]}"
+    fi
+  done
+
+  # Restore 'set -e' behavior after handling errors
+  set -e
+
+  return $failed
+}
+
+main() {
+  # Cd into one above the SCRIPT_DIR (project root)
+  cd "$SCRIPT_DIR/.."
+
+  # If package.json exists, run npm install, unless node_modules exists and is a symlink.
+  if [ -f package.json ] && [ ! -L node_modules ]; then
+    npm install --loglevel=silent --silent
+  fi
+
+  # Prepare the list of commands
+  commands=(
+    "bundle exec brakeman -5 -w3 -q --no-summary"
+    "bundle exec cspell --color --no-relative --quiet"
+    "bundle exec rubocop --color"
+  )
+
+  if [[ -f ./bin/erb_lint ]]; then
+    commands+=("./bin/erb_lint --lint-all")
+  fi
+
+  if [[ -f ./bin/eslint ]]; then
+    commands+=("./bin/eslint")
+  fi
+
+  if [[ -f package.json ]] && (npm run --loglevel=silent --silent 2>/dev/null | grep -q format:check); then
+    commands+=("npm run --loglevel=silent --silent format:check")
+  fi
+
+  # Call the function with the prepared list of commands
+  if run_commands_in_parallel "${commands[@]}"; then
+    echo "✓ All checks passed."
+  else
+    echo "✗ Some checks failed."
+    exit 1
+  fi
+}
+
+main "$@"

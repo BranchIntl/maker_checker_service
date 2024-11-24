@@ -1,0 +1,6 @@
+en:
+  service:
+    errors:
+      models:
+        gem_template/print_service:
+          unhandled_type: The object type is not handled for printing.

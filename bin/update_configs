@@ -1,0 +1,194 @@
+#!/bin/bash
+
+# This script updates various files (including this file itself) from the
+# gem_template repo by selectively merging the gem_template repo's main branch
+# into the current branch.
+
+# Exit immediately if a command exits with a nonzero status
+set -e
+
+# Get the absolute path of this script
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+
+# Find and change to the project root (the top-level directory of the Git repository)
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+SCRIPT_RELATIVE_PATH="${SCRIPT_PATH#$PROJECT_ROOT/}"
+cd "$PROJECT_ROOT"
+
+PROJECT_NAME=$(basename "$PROJECT_ROOT")
+TEMPLATE_REPO_URL="https://github.com/BranchIntl/gem_template.git"
+TEMPLATE_REPO_NAME="gem_template"
+MERGE_MESSAGE="Merge configs from $TEMPLATE_REPO_NAME/main"
+
+load_synced_files() {
+  local synced_files_file=".github/gem_template/synced_files.txt"
+  SYNCED_FILES=()
+
+  # Load synced files into SYNCED_FILES array
+  if [[ ! -f "$synced_files_file" ]]; then
+    echo "Error: Synced files configuration not found at $synced_files_file"
+    exit 1
+  fi
+
+  # Read the file line by line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Remove comments and trim whitespace
+    line="${line%%#*}"           # Remove everything after #
+    line="${line//[[:space:]]/}" # Remove all spaces
+
+    # Skip empty lines
+    if [[ -n "$line" ]]; then
+      SYNCED_FILES+=("$line")
+    fi
+  done <"$synced_files_file"
+}
+
+start_template_branch_merge() {
+  echo "Starting first part of update process (merge only)..."
+
+  echo "Updating $TEMPLATE_REPO_NAME..."
+  git fetch "$TEMPLATE_REPO_URL" main:$TEMPLATE_REPO_NAME
+
+  # Merge gem_template into main_for_update without auto-resolving conflicts.
+  git merge --allow-unrelated-histories --no-commit --no-ff $TEMPLATE_REPO_NAME >/dev/null 2>&1 || true
+}
+
+finish_template_branch_merge() {
+  echo "Continuing second part of update process..."
+
+  # For each of the conflicting files, if the file isn't in SYNCED_FILES, accept
+  # ours.
+  git diff --name-only --diff-filter=U | while IFS= read -r file; do
+    # Flag to check if the file or directory is in SYNCED_FILES
+    local is_synced=false
+
+    # Loop through SYNCED_FILES array to check if the file or directory is in the list
+    for synced_file in "${SYNCED_FILES[@]}"; do
+      # Strip any trailing slashes from synced_file for comparison clarity.
+      synced_file=${synced_file%/}
+
+      # Check if the conflicting file starts with any of the synced directories or matches a synced file
+      if [[ "$file" == "$synced_file" || "$file" == "$synced_file/"* ]]; then
+        is_synced=true
+        break
+      fi
+    done
+
+    # If the conflicting file is NOT in SYNCED_FILES, accept ours
+    if [[ "$is_synced" == false ]]; then
+      echo "Accepting our version of $file"
+      git checkout --ours "$file"
+      git add "$file"
+    else
+      # If the file is in SYNCED_FILES, but was deleted by us, just delete it.
+      if git status --porcelain=v1 "$file" | grep -q "^D"; then
+        echo "Deleting $file"
+        git rm "$file"
+      fi
+    fi
+  done
+
+  # Any changed files that are NOT in the SYNCED_FILES array should be restored
+  # to our version (not the one from the template repo).
+  git diff --name-only --cached | while IFS= read -r file; do
+    # Flag to check if the file or directory is in SYNCED_FILES
+    local is_synced=false
+
+    # Loop through SYNCED_FILES array to check if the file or directory is in the list
+    for synced_file in "${SYNCED_FILES[@]}"; do
+      # Strip any trailing slashes from synced_file for comparison clarity.
+      synced_file=${synced_file%/}
+
+      # Check if the staged file starts with any of the synced directories or matches a synced file
+      if [[ "$file" == "$synced_file" || "$file" == "$synced_file/"* ]]; then
+        is_synced=true
+        break
+      fi
+    done
+
+    # If the file is NOT in SYNCED_FILES, unstage and restore it.
+    if [[ "$is_synced" == false ]]; then
+      echo "Unstaging file: $file"
+      git reset "$file"
+
+      # Check if the file exists in the current branch.
+      if git ls-files --error-unmatch "$file" >/dev/null 2>&1; then
+
+        # If the file exists, check it out (restore).
+        git checkout -- "$file"
+      else
+        # If the file doesn't exist, remove it.
+        echo "Removing new file: $file"
+        git clean -f "$file"
+
+        # Walk up and try to remove empty directories from bottom to top.
+        dir=$(dirname "$file")
+        while [[ "$dir" != "." && -d $dir ]]; do
+          echo "Attempting to remove empty directory: $dir"
+          rmdir "$dir" || break # Stop if the directory isn't empty.
+          dir=$(dirname "$dir") # Move one level up.
+        done
+      fi
+    fi
+  done
+}
+
+commit_or_show_message() {
+  # Check if there are any new commits from the gem_template branch that haven't been merged yet.
+  new_commit_count=$(git rev-list --count HEAD..$TEMPLATE_REPO_NAME)
+
+  if [[ "$new_commit_count" -gt 0 ]]; then
+    # Check for unresolved conflicts after attempting to resolve them.
+    unresolved_files=$(git diff --name-only --diff-filter=U)
+
+    if [[ -n "$unresolved_files" ]]; then
+      # If there are unresolved conflicts, print a message and show the list of files.
+      echo -e "🧯 Merge conflict(s) detected. Please resolve the following files and then commit:\n"
+      echo "$unresolved_files"
+      echo "$MERGE_MESSAGE" >.git/MERGE_MSG
+      return 1 # Exit with an error code to indicate unresolved conflicts.
+    else
+      # If no unresolved conflicts, check for changes and commit.
+      if git diff-index --quiet HEAD; then
+        # No changes, force a merge commit with --allow-empty.
+        echo "🏄 No changes detected. Creating an empty merge commit."
+        git commit --allow-empty -m "$MERGE_MESSAGE"
+      else
+        # Changes exist, create a normal merge commit.
+        echo "🏄 Changes detected. Committing the merge."
+        git commit -m "$MERGE_MESSAGE"
+      fi
+    fi
+  else
+    # No new commits from gem_template branch, so skip the merge entirely.
+    echo "🏄 No new commits on $TEMPLATE_REPO_NAME sync last sync."
+    git merge --abort >/dev/null 2>&1 || true # Just in case a merge started.
+    exit 0
+  fi
+}
+
+update_template_branch() {
+  local continue_flag="$1"
+
+  if [[ "$continue_flag" != "--continue" ]]; then
+    ### Part 1: Start Merge Process Only ###
+    start_template_branch_merge
+
+    # Check for conflicts specifically with this update script itself
+    # (bin/update_configs). If there are no conflicts, we can re-run the script.
+    # If there are conflicts, we can't do that (since those conflicts have to be
+    # resolved), so we continue with the script as it is.
+    if git diff-index --quiet HEAD --diff-filter=U -- "$SCRIPT_RELATIVE_PATH"; then
+      echo "No conflicts with $SCRIPT_RELATIVE_PATH. Re-running script with continue flag..."
+      exec bash "./$SCRIPT_RELATIVE_PATH" --continue
+    fi
+  fi
+
+  ### Part 2: Continue after successful first part ###
+  finish_template_branch_merge
+  commit_or_show_message
+}
+
+load_synced_files
+update_template_branch "$1"

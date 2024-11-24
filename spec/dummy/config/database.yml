@@ -1,0 +1,17 @@
+default: &default
+  adapter: postgresql
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  timeout: 5000
+  host: <%= ENV.fetch('DATABASE_HOST', '') %>
+  port: <%= ENV.fetch('DATABASE_PORT', '') %>
+  prepared_statements: <%= ENV.fetch('DATABASE_PREPARED_STATEMENTS', 'false').casecmp?('true') %>
+  advisory_locks: <%= ENV.fetch('DATABASE_ADVISORY_LOCKS', 'true').casecmp?('true') %>
+  statement_limit: <%= ENV.fetch('DATABASE_STATEMENT_LIMIT', '1000').to_i %>
+
+development:
+  <<: *default
+  database: <%= ENV.fetch('DATABASE_NAME', 'gem_template_development') %>
+
+test:
+  <<: *default
+  database: <%= ENV.fetch('DATABASE_NAME', 'gem_template_test') %><%= ENV['TEST_ENV_NUMBER'] %>

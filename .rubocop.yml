@@ -1,0 +1,20 @@
+inherit_gem:
+  branch_rubocop:
+    - config/main.yml
+    - config/rails.yml
+    - config/rails_best_practices.yml
+
+# Disable as the the gem does not introduce a transaction model for the concerns
+# to be related to.
+Naming/ConcernsLocation:
+  Enabled: false
+
+# Disable as the approach in this gem is to use single table inheritance so the
+# business logic resides in the model classes in this case, not in services.
+Metrics/MethodLength/Models:
+  Enabled: false
+
+# The transaction strategy functions more as an object and in the current design
+# seems odd with a Service suffix. This could later be refactored.
+Naming/Suffix/Services:
+  Enabled: false

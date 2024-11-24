@@ -1,0 +1,26 @@
+name: Configure Branch Protection Rules
+
+on:
+  create: # Triggered when a new repository is created from a template
+
+jobs:
+  configure-branch-protection:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to manage branch protection rules through the API
+
+    steps:
+      # Step 1: Check out the repository
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      # Step 2: Apply Branch Protection Rules Using REST API
+      - name: Apply Branch Protection Rules
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/rulesets \
+            -d "$(cat .github/gem_template/rulesets/main.json)"

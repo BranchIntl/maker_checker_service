@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# This is used by circle ci to generate a new repo based on the gem_template
+# repo and configure it.
+
+# Exit immediately if a command exits with a nonzero status
+set -e
+
+ORG_NAME="$CIRCLE_PROJECT_USERNAME"
+TEMPLATE_REPO="gem_template"
+
+generate_repo() {
+  # Represent repo_name in an underscore form (equivalent to Rails
+  # string.parameterize(separator: '_')).
+  local repo_name=$(echo "$1" | tr '[:upper:]' '[:lower:]' | tr -c '[:alnum:]' '_')
+}
+
+create_repository() {
+  local repo_name=$1
+
+  echo "ORG_NAME: $ORG_NAME"
+  echo "TEMPLATE_REPO: $TEMPLATE_REPO"
+  echo "repo_name: $repo_name"
+
+  # curl -L \
+  #   -X POST \
+  #   -H "Accept: application/vnd.github+json" \
+  #   -H "Authorization: Bearer $GITHUB_TOKEN" \
+  #   -H "X-GitHub-Api-Version: 2022-11-28" \
+  #   https://api.github.com/repos/$ORG_NAME/$TEMPLATE_REPO/generate \
+  #   -d "{\"owner\":\"$ORG_NAME\",\"name\":\"$repo_name\",\"description\":\"\",\"include_all_branches\":false,\"private\":true}"
+}
+
+generate_repo "$1"

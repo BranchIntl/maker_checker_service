@@ -1,0 +1,150 @@
+{
+  "erb.erb-lint.executePath": "bin/",
+  "files.exclude": {
+    "**/.idea": true,
+    "**/.byebug_history": true,
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "node_modules": true,
+    "rspec_tracer.lock": true,
+    "rspec_tracer_cache/": true,
+    "rspec_tracer_coverage/": true,
+    "rspec_tracer_report/": true,
+  },
+  "files.associations": {
+    "*.py": "python",
+    "Dockerfile-*": "dockerfile",
+    "*.http.*": "http",
+    "*.html.erb": "erb",
+    "*.turbo_stream.erb": "erb",
+    "*.yml.erb": "yaml",
+    "*.spec": "ruby",
+    "*.ruby": "ruby",
+    "*.jbuilder": "ruby",
+    "*.txt": "markdown",
+  },
+  "cSpell.enabledFileTypes": {
+    "asciidoc": true,
+    "c": true,
+    "cpp": true,
+    "csharp": true,
+    "css": true,
+    "go": true,
+    "handlebars": true,
+    "html": true,
+    "jade": true,
+    "javascript": true,
+    "javascriptreact": true,
+    "json": true,
+    "latex": true,
+    "less": true,
+    "markdown": true,
+    "php": true,
+    "plaintext": true,
+    "pub": true,
+    "python": true,
+    "restructuredtext": true,
+    "ruby": true,
+    "rust": true,
+    "scss": true,
+    "text": true,
+    "typescript": true,
+    "typescriptreact": true,
+    "yml": true
+  },
+  "files.trimTrailingWhitespace": true,
+  "files.trimFinalNewlines": true,
+  "rubyLsp.indexing": {
+    "excludedPatterns": [
+      "**/test/**/*.rb",
+      "**/spec/**/*.rb",
+      "**/bin/**/*",
+    ],
+    "excludedGems": [
+      "rubocop",
+      "rubocop-performance"
+    ],
+    "excludedMagicComments": [
+      "compiled:true"
+    ],
+  },
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "text": "You are an exceptional Ruby on Rails programmer. You are working on a pure REST application that closely follows best practices using small controllers, lean data-oriented models, small views, JWT authentication, services, draper decorators, and active model serializers. Provide all suggestions taking into account best practices for Ruby and Ruby on Rails applications."
+    }
+  ],
+  "rubyLsp.formatter": "rubocop",
+  "rubyLsp.enabledFeatures": {
+    "codeActions": true,
+    "diagnostics": true,
+    "documentHighlights": true,
+    "documentLink": true,
+    "documentSymbols": true,
+    "foldingRanges": true,
+    "formatting": true,
+    "hover": true,
+    "inlayHint": true,
+    "onTypeFormatting": true,
+    "selectionRanges": true,
+    "semanticHighlighting": true,
+    "completion": true,
+    "codeLens": true,
+    "definition": true,
+    "workspaceSymbol": true,
+    "signatureHelp": true,
+    "typeHierarchy": true
+  },
+  "[ruby]": {
+    "editor.formatOnType": true,
+    "editor.defaultFormatter": "Shopify.ruby-lsp",
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true, // Format files automatically when saving
+    "editor.tabSize": 2, // Use 2 spaces for indentation
+    "editor.insertSpaces": true, // Use spaces and not tabs for indentation
+    "editor.semanticHighlighting.enabled": true, // Enable semantic highlighting
+    "rewrap.wrappingColumn": 80,
+  },
+  "[erb]": {
+    "editor.wordWrap": "off",
+    "rewrap.autoWrap.enabled": false,
+    "editor.formatOnType": true,
+    "editor.defaultFormatter": "aliariff.vscode-erb-beautify",
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": false, // Prevent full file formatting, as it messes with spacing and indentation in some cases.
+    "editor.tabSize": 2, // Use 2 spaces for indentation
+    "editor.insertSpaces": true, // Use spaces and not tabs for indentation
+    "editor.semanticHighlighting.enabled": true, // Enable semantic highlighting
+  },
+  "[json][jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features",
+    "editor.wordWrap": "off",
+    "rewrap.autoWrap.enabled": false,
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2, // Use 2 spaces for indentation
+    "editor.insertSpaces": true, // Use spaces and not tabs for indentation
+    "editor.semanticHighlighting.enabled": true, // Enable semantic highlighting
+  },
+  "[javascript][typescript][yaml]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.wordWrap": "off",
+    "rewrap.autoWrap.enabled": false,
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true,
+    "editor.tabSize": 2, // Use 2 spaces for indentation
+    "editor.insertSpaces": true, // Use spaces and not tabs for indentation
+    "editor.semanticHighlighting.enabled": true, // Enable semantic highlighting
+  },
+  "[sql]": {
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.defaultFormatter": "bradymholt.pgformatter",
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true, // Be careful not to save structure.sql.
+  },
+  "rewrap.wrappingColumn": 80,
+}
