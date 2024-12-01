@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 module MakerCheckerService
   class MakerCheckerService
-    def initialize(permission_service: StaffPermissionService)
-      @permission_service = permission_service
-    end
 
     Escalation_roles = YAML.load_file("#{Rails.root}/config/maker_checker/escalations/escalation_roles.yml")&.deep_symbolize_keys# these should be based on where we escalate requests depening on the action.
     # this can be a YML that we can fetch this permissions from.
@@ -43,21 +40,21 @@ module MakerCheckerService
 
     # Bulk approve requests
     def bulk_approve_requests(request_ids, user, justification)
-      MakerChecker::Request.find(request_ids).each do |request|
+      MakerCheckerRequest.find(request_ids).each do |request|
         approve_request(request, user, justification)
       end
     end
 
     # Bulk deny requests
     def bulk_deny_requests(request_ids, user, justification)
-      MakerChecker::Request.find(request_ids).each do |request|
+      MakerCheckerRequest.find(request_ids).each do |request|
         deny_request(request, user, justification)
       end
     end
 
     # Bulk escalate requests
     def bulk_escalate_requests(request_ids)
-      MakerChecker::Request.find(request_ids).each do |request|
+      MakerCheckerRequest.find(request_ids).each do |request|
         escalate_request(request)
       end
     end
