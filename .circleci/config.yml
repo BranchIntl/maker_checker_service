@@ -49,12 +49,14 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Copy file for checksum
+          # This step is needed because the Gemfile can sometimes change
+          # after calling install.
+          name: Copy Gemfile for checksum
           command: |
             cp Gemfile checksum-file
       - restore_cache:
           keys:
-            - build-002-{{ checksum "checksum-file" }}
+            - maker-checker-service-build-004-{{ checksum "checksum-file" }}
       - run:
           name: Install bundler
           command: |
@@ -62,16 +64,8 @@ jobs:
       - run:
           name: Install dependencies
           command: ./bin/bundle install
-      - run:
-          name: Schema.rb/structure.sql update
-          command: |
-            # This is purely to update the schema.rb or structure.sql file. The
-            # tables in the database are not preserved to subsequent steps in
-            # the CircleCI workflow.
-            ./bin/bundle exec rails db:create
-            ./bin/bundle exec rails db:migrate
       - save_cache:
-          key: build-002-{{ checksum "checksum-file" }}
+          key: maker-checker-service-build-004-{{ checksum "checksum-file" }}
           paths:
             - vendor/bundle
             - Gemfile.lock
@@ -85,19 +79,18 @@ jobs:
           path: lint
   test:
     <<: *default_environment
-    parallelism: 6 # Can be increased to 6 as the number of tests increases.
+    parallelism: 1 # Can be increased to 6 as the number of tests increases.
     resource_class: small
     steps:
       - checkout
       - restore_cache:
           keys:
-            - build-002-{{ checksum "Gemfile" }}
+            - maker-checker-service-build-004-{{ checksum "Gemfile" }}
       - run:
           # Bundler does not get saved in the cache since it's installed at
           # /usr/local/bin in the circle ci image, so it has to be re-installed.
           name: Install bundler
           command: |
-            BUNDLER_VERSION='2.5.10' # Hardcoded because Gemfile.lock is not committed to the repo for libraries.
             gem install bundler:$BUNDLER_VERSION rake-compiler
       - run: mkdir -p /tmp/test-results/rspec
       # When profiling tests, set RUBYOPT=-W2
@@ -107,7 +100,6 @@ jobs:
             # Determine Redis database index (1 to 6) based on CIRCLE_NODE_INDEX
             REDIS_DB_INDEX=$(expr $CIRCLE_NODE_INDEX + 1)
             export REDIS_DB_INDEX
-
             TESTFILES=$(circleci tests glob "spec/**/*spec.rb" "extensions/**/spec/**/*spec.rb" | circleci tests split --split-by=timings)
             RUBYOPT=-W0 ./bin/rspec ${TESTFILES} --color -f p -f RspecJunitFormatter -o /tmp/test-results/rspec/results.xml
       # Save test results for timing analysis
@@ -119,18 +111,10 @@ jobs:
           path: /tmp/ruby-warnings.txt
       - store_artifacts:
           path: coverage
-  generate_repo:
-    <<: *default_environment
-    steps:
-      - checkout
-      - run:
-          name: Generate repo
-          command: ./.github/scripts/generate_repo "<< pipeline.parameters.generate_repo >>"
 
 workflows:
   version: 2
   build_and_test:
-    unless: "<< pipeline.parameters.generate_repo >>"
     jobs:
       - build:
           context: BranchIntl
@@ -138,8 +122,3 @@ workflows:
           context: BranchIntl
           requires:
             - build
-  generate_repo:
-    when: "<< pipeline.parameters.generate_repo >>"
-    jobs:
-      - generate_repo:
-          context: BranchIntl
