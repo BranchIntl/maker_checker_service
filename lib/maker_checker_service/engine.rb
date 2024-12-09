@@ -1,5 +1,5 @@
 module MakerCheckerService
   class Engine < ::Rails::Engine
-    isolate_namespace MakerChecker
+    isolate_namespace MakerCheckerService
   end
 end

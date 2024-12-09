@@ -3,8 +3,8 @@
 require_relative 'lib/version'
 
 Gem::Specification.new do |spec|
-  spec.name = 'rbac_service'
-  spec.version = RbacService::VERSION
+  spec.name = 'maker_checker_service'
+  spec.version = MakerCheckerService::VERSION
   spec.authors = ['Branch International']
   spec.email = ['engineering@branch.co']
 
