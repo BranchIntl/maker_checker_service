@@ -1,124 +1,31 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/configuration-reference
 version: 2.1
-executors:
-  build_machine:
-    machine:
-      image: ubuntu-2004:2024.01.1
-      docker_layer_caching: true
-    resource_class: arm.medium
 
-orbs:
-  aws-ecr: circleci/aws-ecr@6.7.0
-  kubernetes: circleci/kubernetes@0.10.0
-  aws-cli: circleci/aws-cli@1.3.0
-  docker: circleci/docker@1.4.0
-  slack: circleci/slack@4.1.1
-
-parameters:
-  generate_repo:
-    type: string
-    default: ""
-
-default_environment: &default_environment
-  working_directory: ~/project
-  docker:
-    - image: $AWS_ECR_MUMBAI_ACCOUNT_URL/$PRIVATE_GEM_BASE_IMAGE_PATH
-      environment:
-        BUNDLE_JOBS: 4
-        BUNDLE_PATH: vendor/bundle
-        BUNDLE_RETRY: 3
-        BUNDLE_WITHOUT: development:staging:production
-        BUNDLE_WITH: test
-        DB_HOST: localhost
-        PGHOST: 127.0.0.1
-        RAILS_ENV: test
-        DATABASE_NAME: test
-        REDIS_HOST: 127.0.0.1
-        JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
-        RUBY_YJIT_ENABLE: 1
-        BUNDLER_VERSION: 2.5.10 # Hardcoded because Gemfile.lock is not committed to the repo for libraries.
-    - image: cimg/postgres:14.4
-      environment:
-        POSTGRES_DB: test
-        POSTGRES_PASSWORD: ""
-        POSTGRES_USER: circleci
-    - image: redis
-
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/jobs-steps/#jobs-overview & https://circleci.com/docs/configuration-reference/#jobs
 jobs:
-  build:
-    <<: *default_environment
-    steps:
-      - checkout
-      - run:
-          # This step is needed because the Gemfile can sometimes change
-          # after calling install.
-          name: Copy Gemfile for checksum
-          command: |
-            cp Gemfile checksum-file
-      - restore_cache:
-          keys:
-            - maker-checker-service-build-004-{{ checksum "checksum-file" }}
-      - run:
-          name: Install bundler
-          command: |
-            gem install bundler:$BUNDLER_VERSION rake-compiler
-      - run:
-          name: Install dependencies
-          command: ./bin/bundle install
-      - save_cache:
-          key: maker-checker-service-build-004-{{ checksum "checksum-file" }}
-          paths:
-            - vendor/bundle
-            - Gemfile.lock
-      - run:
-          name: Setup npm github access token
-          command: git config --global url."https://$BUNDLE_GITHUB__COM@github.com/".insteadOf ssh://git@github.com/
-      - run:
-          name: Run checks
-          command: ./bin/check
-      - store_artifacts:
-          path: lint
-  test:
-    <<: *default_environment
-    parallelism: 1 # Can be increased to 6 as the number of tests increases.
-    resource_class: small
-    steps:
-      - checkout
-      - restore_cache:
-          keys:
-            - maker-checker-service-build-004-{{ checksum "Gemfile" }}
-      - run:
-          # Bundler does not get saved in the cache since it's installed at
-          # /usr/local/bin in the circle ci image, so it has to be re-installed.
-          name: Install bundler
-          command: |
-            gem install bundler:$BUNDLER_VERSION rake-compiler
-      - run: mkdir -p /tmp/test-results/rspec
-      # When profiling tests, set RUBYOPT=-W2
-      - run:
-          name: Parallel RSpec
-          command: |
-            # Determine Redis database index (1 to 6) based on CIRCLE_NODE_INDEX
-            REDIS_DB_INDEX=$(expr $CIRCLE_NODE_INDEX + 1)
-            export REDIS_DB_INDEX
-            TESTFILES=$(circleci tests glob "spec/**/*spec.rb" "extensions/**/spec/**/*spec.rb" | circleci tests split --split-by=timings)
-            RUBYOPT=-W0 ./bin/rspec ${TESTFILES} --color -f p -f RspecJunitFormatter -o /tmp/test-results/rspec/results.xml
-      # Save test results for timing analysis
-      - store_test_results:
-          path: /tmp/test-results
-      - store_artifacts:
-          path: /tmp/test-results
-      - store_artifacts:
-          path: /tmp/ruby-warnings.txt
-      - store_artifacts:
-          path: coverage
+  say-hello:
+    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
+    # See: https://circleci.com/docs/executor-intro/ & https://circleci.com/docs/configuration-reference/#executor-job
+    docker:
+      # Specify the version you desire here
+      # See: https://circleci.com/developer/images/image/cimg/base
+      - image: cimg/base:current
 
+    # Add steps to the job
+    # See: https://circleci.com/docs/jobs-steps/#steps-overview & https://circleci.com/docs/configuration-reference/#steps
+    steps:
+      # Checkout the code as the first step.
+      - checkout
+      - run:
+          name: "Say hello"
+          command: "echo Hello, World!"
+
+# Orchestrate jobs using workflows
+# See: https://circleci.com/docs/workflows/ & https://circleci.com/docs/configuration-reference/#workflows
 workflows:
-  version: 2
-  build_and_test:
+  say-hello-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
+    # Inside the workflow, you define the jobs you want to run.
     jobs:
-      - build:
-          context: BranchIntl
-      - test:
-          context: BranchIntl
-          requires:
-            - build
+      - say-hello
